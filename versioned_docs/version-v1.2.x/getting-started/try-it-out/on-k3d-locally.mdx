@@ -159,15 +159,15 @@ OpenChoreo uses [External Secrets Operator](https://external-secrets.io/) to man
 
 The values file runs a postStart script that configures Kubernetes auth, creates reader/writer policies, and seeds the following secrets into the store:
 
-| Secret                         | Value                          | Used By                        |
-| ------------------------------ | ------------------------------ | ------------------------------ |
-| `backstage-backend-secret`     | `local-dev-backend-secret`     | Backstage session signing      |
-| `backstage-client-secret`      | `backstage-portal-secret`      | Backstage OAuth with ThunderID |
-| `backstage-jenkins-api-key`    | `placeholder-not-in-use`       | Placeholder                    |
-| `observer-oauth-client-secret` | `openchoreo-observer-secret`   | Observer OAuth with ThunderID  |
-| `rca-oauth-client-secret`      | `openchoreo-rca-agent-secret`  | SRE Agent OAuth with ThunderID |
-| `opensearch-username`          | `admin`                        | OpenSearch access              |
-| `opensearch-password`          | `ThisIsTheOpenSearchPassword1` | OpenSearch access              |
+| Secret                         | Value                                               | Used By                        |
+| ------------------------------ | --------------------------------------------------- | ------------------------------ |
+| `backstage-backend-secret`     | `local-dev-backend-secret`                          | Backstage session signing      |
+| `backstage-client-secret`      | `backstage-portal-secret`                           | Backstage OAuth with ThunderID |
+| `backstage-jenkins-api-key`    | `placeholder-not-in-use`                            | Placeholder                    |
+| `observer-oauth-client-secret` | `openchoreo-observer-resource-reader-client-secret` | Observer OAuth with ThunderID  |
+| `rca-oauth-client-secret`      | `openchoreo-rca-agent-secret`                       | SRE Agent OAuth with ThunderID |
+| `opensearch-username`          | `admin`                                             | OpenSearch access              |
+| `opensearch-password`          | `ThisIsTheOpenSearchPassword1`                      | OpenSearch access              |
 
 #### Create the ClusterSecretStore
 
@@ -318,7 +318,7 @@ kubectl apply -f https://raw.githubusercontent.com/openchoreo/openchoreo/${versi
 - **Environments**: development, staging, production
 - **DeploymentPipeline**: default (development -> staging -> production)
 - **ClusterComponentTypes**: service, web-application, scheduled-task, worker
-- **ClusterWorkflows**: docker, google-cloud-buildpacks, ballerina-buildpack, react
+- **ClusterWorkflows**: dockerfile-builder, paketo-buildpacks-builder, gcp-buildpacks-builder, ballerina-buildpack-builder
 - **ClusterTraits**: observability-alert-rule
 
 Cluster-scoped resources (ClusterComponentType, ClusterWorkflow, ClusterTrait) are visible to all namespaces automatically, so any additional namespace you create will have access to them right away.
@@ -435,7 +435,7 @@ helm upgrade --install registry twuni/docker-registry \\
 
 #### Install Workflow Templates
 
-Build pipelines are defined as ClusterWorkflowTemplates. Each build workflow (docker, react, etc.) is composed from smaller shared templates: a **checkout step** (controls how source code is cloned), **build coordinator templates** (docker, react, ballerina-buildpack, google-cloud-buildpacks), and a **publish step** (controls where built images get pushed). For k3d, the publish step targets the local registry at `host.k3d.internal:10082`. In a real environment you would point it at ECR, GAR, GHCR, or whatever registry you use.
+Build pipelines are defined as ClusterWorkflowTemplates. Each build workflow (`dockerfile-builder`, `paketo-buildpacks-builder`, etc.) is composed from smaller shared templates: a **checkout step** (controls how source code is cloned), **build coordinator templates** (`containerfile-build`, `paketo-buildpacks-build`, `gcp-buildpacks-build`, `ballerina-buildpack-build`), and a **publish step** (controls where built images get pushed). For k3d, the publish step targets the local registry at `host.k3d.internal:10082`. In a real environment you would point it at ECR, GAR, GHCR, or whatever registry you use.
 
 <CodeBlock language="bash">
   {`kubectl apply \\
@@ -899,7 +899,7 @@ You should see the OpenChoreo console. The control plane is working.
 Wait for the deployment to come up:
 
 ```bash
-kubectl wait --for=condition=available deployment \
+kubectl wait --for=create --for=condition=available deployment \
   -l openchoreo.dev/component=react-starter -A --timeout=120s
 ```
 
@@ -938,7 +938,7 @@ You can also open the Argo Workflows UI at [http://localhost:10081](http://local
 After the build completes, wait for the deployment:
 
 ```bash
-kubectl wait --for=condition=available deployment \
+kubectl wait --for=create --for=condition=available deployment \
   -l openchoreo.dev/component=greeting-service -A --timeout=300s
 ```
 
